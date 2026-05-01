@@ -21,7 +21,6 @@
     ```
 3. Populate the database (this will take a while):
     ```
-    cd dataset
     chmod +x ./populate_database.sh
     ./populate_database.sh
     ```

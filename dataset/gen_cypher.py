@@ -127,7 +127,7 @@ def generate_cypher_queries(
         for node in nodes:
             p = node.profile
             f.write(f"""
-                CREATE (n:Node {{
+                CREATE (n:User {{
                     id: {node.id}, 
                     name: {_cypher_string_literal(p.name)}, 
                     email: {_cypher_string_literal(p.email)}, 
@@ -139,7 +139,7 @@ def generate_cypher_queries(
         f.write("\n// 2. Create relationships\n")
         for edge in edges:
             f.write(f"""
-                MATCH (a:Node {{id: {edge.src}}}), (b:Node {{id: {edge.dst}}})
+                MATCH (a:User {{id: {edge.src}}}), (b:User {{id: {edge.dst}}})
                 CREATE (a)-[:FOLLOWS]->(b);
             """)
 
