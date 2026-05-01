@@ -42,3 +42,4 @@ build/
 .venv/
 dataset/twitter
 dataset/__pycache__/
+dataset/populate_database.cypher
