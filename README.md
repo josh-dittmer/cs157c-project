@@ -8,6 +8,7 @@
 ## Quick Start
 
 1. Prerequisites:
+    * Have Docker installed
     * Have Python installed
     * Have IntellIJ IDEA installed
 
