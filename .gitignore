@@ -37,3 +37,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### CS 157C Project ###
+.venv/
+dataset/twitter
+dataset/__pycache__/
