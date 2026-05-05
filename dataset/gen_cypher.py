@@ -143,6 +143,14 @@ def generate_cypher_queries(
                 CREATE (a)-[:FOLLOWS]->(b);
             """)
 
+        f.write("""\n
+            // 3. Create necessary indexes
+
+            CREATE FULLTEXT INDEX fulltext_index
+            FOR (u:User)
+            ON EACH [u.name, u.username];
+        """)
+
 # first, load the dataset
 print("Loading dataset...")
 nodes, edges = load_dataset()

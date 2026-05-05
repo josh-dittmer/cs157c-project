@@ -3,9 +3,12 @@ package org.group2;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.types.Node;
 
+import java.util.List;
 import java.util.Scanner;
 
 import static org.neo4j.driver.Values.parameters;
@@ -61,6 +64,8 @@ public class Main {
             System.out.println("4. Edit My Profile");
             System.out.println("5. Follow Another User");
             System.out.println("6. Unfollow a User");
+            System.out.println("10. Search Users");
+            System.out.println("11. Explore Popular Users");
             System.out.println("0. Exit");
             System.out.print("Choose an option: ");
 
@@ -84,6 +89,12 @@ public class Main {
                     break;
                 case "6":
                     unfollowUser();
+                    break;
+                case "10":
+                    searchUsers();
+                    break;
+                case "11":
+                    explorePopularUsers();
                     break;
                 case "0":
                     System.out.println("Goodbye.");
@@ -388,6 +399,86 @@ public class Main {
 
         } catch (Exception e) {
             System.out.println("Unfollow error: " + e.getMessage());
+        }
+    }
+
+    // UC-10: Search Users
+    private static void searchUsers() {
+        /* The following index has been built on the database:
+
+            CREATE FULLTEXT INDEX fulltext_index
+            FOR (u:User)
+            ON EACH [u.name, u.username];
+
+        */
+
+        System.out.println("\n--- UC-10: Search Users ---");
+
+        System.out.print("Enter the user's name or username: ");
+        String targetQuery = scanner.nextLine().trim();
+
+        try (Session session = driver.session()) {
+            List<User> users = session.executeRead(tx -> {
+                Result result = tx.run(
+                        """
+                        CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
+                        YIELD node, score
+                        RETURN node, score ORDER BY score DESC LIMIT 5;
+                        """,
+                        parameters(
+                                "targetQuery", "*" + targetQuery + "~*"
+                        )
+                );
+
+                return result.list(record -> {
+                    Node node = record.get("node").asNode();
+
+                    User user = new User();
+                    user.setName(node.get("name").asString(""));
+                    user.setEmail(node.get("email").asString(""));
+                    user.setUsername(node.get("username").asString(""));
+                    user.setPassword(node.get("password").asString(""));
+
+                    return user;
+                });
+            });
+
+            System.out.println("Search results:");
+            for (User user : users) {
+                System.out.println("\t" + user.getName() + " (@" + user.getUsername() + ")");
+            }
+        } catch (Exception e) {
+            System.out.println("Search error: " + e.getMessage());
+        }
+    }
+
+    // UC-11: Explore Popular Users
+    private static void explorePopularUsers() {
+        System.out.println("\n--- UC-11: Explore Popular Users ---");
+
+        try (Session session = driver.session()) {
+            session.executeWriteWithoutResult(tx -> {
+                Result result = tx.run(
+                        """
+                        MATCH (u:User)
+                        RETURN u, COUNT{(u)<-[:FOLLOWS]-()} AS numFollowers ORDER BY numFollowers DESC LIMIT 5
+                        """
+                );
+
+                System.out.println("Most popular users:");
+
+                while(result.hasNext()) {
+                    Record record = result.next();
+                    Node node = record.get("u").asNode();
+
+                    String name = node.get("name").asString("");
+                    int numFollowers = record.get("numFollowers").asInt();
+
+                    System.out.println("\t" + name + ": " + numFollowers + " followers");
+                }
+            });
+        } catch (Exception e) {
+            System.out.println("Explore popular error: " + e.getMessage());
         }
     }
 
