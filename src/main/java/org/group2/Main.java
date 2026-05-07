@@ -554,7 +554,6 @@ public class Main {
 
                 return result.list(record -> {
                     Node node = record.get("node").asNode();
-                    System.out.println(record.get("score").asDouble());
 
                     User user = new User();
                     user.setName(node.get("name").asString(""));
