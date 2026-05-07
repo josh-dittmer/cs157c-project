@@ -1,17 +1,16 @@
 package org.group2;
 
+import java.util.List;
+import java.util.Scanner;
+
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.types.Node;
-
-import java.util.List;
-import java.util.Scanner;
-
 import static org.neo4j.driver.Values.parameters;
+import org.neo4j.driver.types.Node;
 
 public class Main {
     private static final String URI = "bolt://localhost:7687";
@@ -39,12 +38,10 @@ public class Main {
 
     private static void testConnection() {
         try (Session session = driver.session()) {
-            String result = session.executeRead(tx ->
-                    tx.run("RETURN 'Connected to Neo4j successfully' AS message")
-                            .single()
-                            .get("message")
-                            .asString()
-            );
+            String result = session.executeRead(tx -> tx.run("RETURN 'Connected to Neo4j successfully' AS message")
+                    .single()
+                    .get("message")
+                    .asString());
             System.out.println(result);
         }
     }
@@ -64,6 +61,9 @@ public class Main {
             System.out.println("4. Edit My Profile");
             System.out.println("5. Follow Another User");
             System.out.println("6. Unfollow a User");
+            System.out.println("7. View Friends/Connections");
+            System.out.println("8. Mutual Connections");
+            System.out.println("9. Friend Recommendations");
             System.out.println("10. Search Users");
             System.out.println("11. Explore Popular Users");
             System.out.println("0. Exit");
@@ -89,6 +89,15 @@ public class Main {
                     break;
                 case "6":
                     unfollowUser();
+                    break;
+                case "7":
+                    viewConnections();
+                    break;
+                case "8":
+                    mutualConnections();
+                    break;
+                case "9":
+                    friendRecommendations();
                     break;
                 case "10":
                     searchUsers();
@@ -133,8 +142,7 @@ public class Main {
             Boolean usernameExists = session.executeRead(tx -> {
                 Result result = tx.run(
                         "MATCH (u:User {username: $username}) RETURN count(u) AS count",
-                        parameters("username", username)
-                );
+                        parameters("username", username));
                 return result.single().get("count").asLong() > 0;
             });
 
@@ -146,26 +154,24 @@ public class Main {
             Integer newId = session.executeWrite(tx -> {
                 Result result = tx.run(
                         """
-                        OPTIONAL MATCH (u:User)
-                        WITH coalesce(max(u.id), 0) + 1 AS newId
-                        CREATE (newUser:User {
-                            id: newId,
-                            name: $name,
-                            email: $email,
-                            username: $username,
-                            password: $password,
-                            bio: $bio
-                        })
-                        RETURN newUser.id AS id
-                        """,
+                                OPTIONAL MATCH (u:User)
+                                WITH coalesce(max(u.id), 0) + 1 AS newId
+                                CREATE (newUser:User {
+                                    id: newId,
+                                    name: $name,
+                                    email: $email,
+                                    username: $username,
+                                    password: $password,
+                                    bio: $bio
+                                })
+                                RETURN newUser.id AS id
+                                """,
                         parameters(
                                 "name", name,
                                 "email", email,
                                 "username", username,
                                 "password", password,
-                                "bio", bio
-                        )
-                );
+                                "bio", bio));
                 return result.single().get("id").asInt();
             });
 
@@ -192,11 +198,10 @@ public class Main {
             Boolean validLogin = session.executeRead(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (u:User {username: $username, password: $password})
-                        RETURN count(u) AS count
-                        """,
-                        parameters("username", username, "password", password)
-                );
+                                MATCH (u:User {username: $username, password: $password})
+                                RETURN count(u) AS count
+                                """,
+                        parameters("username", username, "password", password));
                 return result.single().get("count").asLong() == 1;
             });
 
@@ -224,15 +229,14 @@ public class Main {
             session.executeRead(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (u:User {username: $username})
-                        RETURN u.id AS id,
-                               u.name AS name,
-                               u.email AS email,
-                               u.username AS username,
-                               coalesce(u.bio, '') AS bio
-                        """,
-                        parameters("username", loggedInUsername)
-                );
+                                MATCH (u:User {username: $username})
+                                RETURN u.id AS id,
+                                       u.name AS name,
+                                       u.email AS email,
+                                       u.username AS username,
+                                       coalesce(u.bio, '') AS bio
+                                """,
+                        parameters("username", loggedInUsername));
 
                 if (!result.hasNext()) {
                     System.out.println("Profile not found.");
@@ -281,19 +285,17 @@ public class Main {
             Boolean updated = session.executeWrite(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (u:User {username: $username})
-                        SET u.name = $name,
-                            u.email = $email,
-                            u.bio = $bio
-                        RETURN count(u) AS count
-                        """,
+                                MATCH (u:User {username: $username})
+                                SET u.name = $name,
+                                    u.email = $email,
+                                    u.bio = $bio
+                                RETURN count(u) AS count
+                                """,
                         parameters(
                                 "username", loggedInUsername,
                                 "name", name,
                                 "email", email,
-                                "bio", bio
-                        )
-                );
+                                "bio", bio));
                 return result.single().get("count").asLong() == 1;
             });
 
@@ -328,17 +330,15 @@ public class Main {
             String followedUsername = session.executeWrite(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (me:User {username: $myUsername})
-                        MATCH (target:User {username: $targetUsername})
-                        WHERE me <> target
-                        MERGE (me)-[:FOLLOWS]->(target)
-                        RETURN target.username AS username
-                        """,
+                                MATCH (me:User {username: $myUsername})
+                                MATCH (target:User {username: $targetUsername})
+                                WHERE me <> target
+                                MERGE (me)-[:FOLLOWS]->(target)
+                                RETURN target.username AS username
+                                """,
                         parameters(
                                 "myUsername", loggedInUsername,
-                                "targetUsername", targetUsername
-                        )
-                );
+                                "targetUsername", targetUsername));
 
                 if (!result.hasNext()) {
                     return null;
@@ -373,16 +373,14 @@ public class Main {
             String unfollowedUsername = session.executeWrite(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (me:User {username: $myUsername})-[r:FOLLOWS]->(target:User {username: $targetUsername})
-                        WITH r, target
-                        DELETE r
-                        RETURN target.username AS username
-                        """,
+                                MATCH (me:User {username: $myUsername})-[r:FOLLOWS]->(target:User {username: $targetUsername})
+                                WITH r, target
+                                DELETE r
+                                RETURN target.username AS username
+                                """,
                         parameters(
                                 "myUsername", loggedInUsername,
-                                "targetUsername", targetUsername
-                        )
-                );
+                                "targetUsername", targetUsername));
 
                 if (!result.hasNext()) {
                     return null;
@@ -402,15 +400,136 @@ public class Main {
         }
     }
 
+    // UC-7: View Friends/Connections
+    private static void viewConnections() {
+        System.out.println("\n--- UC-7: View Friends/Connections ---");
+
+        if (!requireLogin())
+            return;
+
+        try (Session session = driver.session()) {
+            // People I follow
+            List<String> following = session.executeRead(tx -> {
+                Result result = tx.run(
+                        """
+                                MATCH (me:User {username: $username})-[:FOLLOWS]->(target:User)
+                                RETURN target.name AS name, target.username AS username
+                                ORDER BY target.name
+                                """,
+                        parameters("username", loggedInUsername));
+                return result.list(r -> r.get("name").asString() + " (@" + r.get("username").asString() + ")");
+            });
+
+            // People following me
+            List<String> followers = session.executeRead(tx -> {
+                Result result = tx.run(
+                        """
+                                MATCH (me:User {username: $username})<-[:FOLLOWS]-(follower:User)
+                                RETURN follower.name AS name, follower.username AS username
+                                ORDER BY follower.name
+                                """,
+                        parameters("username", loggedInUsername));
+                return result.list(r -> r.get("name").asString() + " (@" + r.get("username").asString() + ")");
+            });
+
+            System.out.println("\nFollowing (" + following.size() + "):");
+            if (following.isEmpty()) {
+                System.out.println("\tNone");
+            } else {
+                following.forEach(u -> System.out.println("\t" + u));
+            }
+
+            System.out.println("\nFollowers (" + followers.size() + "):");
+            if (followers.isEmpty()) {
+                System.out.println("\tNone");
+            } else {
+                followers.forEach(u -> System.out.println("\t" + u));
+            }
+
+        } catch (Exception e) {
+            System.out.println("View connections error: " + e.getMessage());
+        }
+    }
+
+    // UC-8: Mutual Connections
+    private static void mutualConnections() {
+        System.out.println("\n--- UC-8: Mutual Connections ---");
+
+        if (!requireLogin())
+            return;
+
+        System.out.print("Enter username to find mutual connections with: ");
+        String targetUsername = scanner.nextLine().trim();
+
+        try (Session session = driver.session()) {
+            List<String> mutuals = session.executeRead(tx -> {
+                Result result = tx.run(
+                        """
+                                MATCH (me:User {username: $myUsername})-[:FOLLOWS]->(mutual:User)<-[:FOLLOWS]-(other:User {username: $targetUsername})
+                                RETURN mutual.name AS name, mutual.username AS username
+                                ORDER BY mutual.name
+                                """,
+                        parameters("myUsername", loggedInUsername, "targetUsername", targetUsername));
+                return result.list(r -> r.get("name").asString() + " (@" + r.get("username").asString() + ")");
+            });
+
+            if (mutuals.isEmpty()) {
+                System.out.println("No mutual connections found with @" + targetUsername + ".");
+            } else {
+                System.out.println("Mutual connections with @" + targetUsername + " (" + mutuals.size() + "):");
+                mutuals.forEach(u -> System.out.println("\t" + u));
+            }
+
+        } catch (Exception e) {
+            System.out.println("Mutual connections error: " + e.getMessage());
+        }
+    }
+
+    // UC-9: Friend Recommendations
+    private static void friendRecommendations() {
+        System.out.println("\n--- UC-9: Friend Recommendations ---");
+
+        if (!requireLogin())
+            return;
+
+        try (Session session = driver.session()) {
+            List<String> recommendations = session.executeRead(tx -> {
+                Result result = tx.run(
+                        """
+                                MATCH (me:User {username: $username})-[:FOLLOWS]->(a:User)-[:FOLLOWS]->(rec:User)
+                                WHERE rec <> me
+                                AND NOT (me)-[:FOLLOWS]->(rec)
+                                RETURN rec.name AS name, rec.username AS username, count(a) AS commonCount
+                                ORDER BY commonCount DESC
+                                LIMIT 10
+                                """,
+                        parameters("username", loggedInUsername));
+                return result.list(r -> r.get("name").asString() + " (@" + r.get("username").asString() + ") — "
+                        + r.get("commonCount").asInt() + " mutual");
+            });
+
+            if (recommendations.isEmpty()) {
+                System.out.println("No recommendations yet. Try following more users first.");
+            } else {
+                System.out.println("Recommended users to follow:");
+                recommendations.forEach(u -> System.out.println("\t" + u));
+            }
+
+        } catch (Exception e) {
+            System.out.println("Friend recommendations error: " + e.getMessage());
+        }
+    }
+
     // UC-10: Search Users
     private static void searchUsers() {
-        /* The following index has been built on the database:
-
-            CREATE FULLTEXT INDEX fulltext_index
-            FOR (u:User)
-            ON EACH [u.name, u.username];
-
-        */
+        /*
+         * The following index has been built on the database:
+         * 
+         * CREATE FULLTEXT INDEX fulltext_index
+         * FOR (u:User)
+         * ON EACH [u.name, u.username];
+         * 
+         */
 
         System.out.println("\n--- UC-10: Search Users ---");
 
@@ -421,14 +540,12 @@ public class Main {
             List<User> users = session.executeRead(tx -> {
                 Result result = tx.run(
                         """
-                        CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
-                        YIELD node, score
-                        RETURN node, score ORDER BY score DESC LIMIT 5;
-                        """,
+                                CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
+                                YIELD node, score
+                                RETURN node, score ORDER BY score DESC LIMIT 5;
+                                """,
                         parameters(
-                                "targetQuery", "*" + targetQuery + "~*"
-                        )
-                );
+                                "targetQuery", "*" + targetQuery + "~*"));
 
                 return result.list(record -> {
                     Node node = record.get("node").asNode();
@@ -460,14 +577,13 @@ public class Main {
             session.executeWriteWithoutResult(tx -> {
                 Result result = tx.run(
                         """
-                        MATCH (u:User)
-                        RETURN u, COUNT{(u)<-[:FOLLOWS]-()} AS numFollowers ORDER BY numFollowers DESC LIMIT 5
-                        """
-                );
+                                MATCH (u:User)
+                                RETURN u, COUNT{(u)<-[:FOLLOWS]-()} AS numFollowers ORDER BY numFollowers DESC LIMIT 5
+                                """);
 
                 System.out.println("Most popular users:");
 
-                while(result.hasNext()) {
+                while (result.hasNext()) {
                     Record record = result.next();
                     Node node = record.get("u").asNode();
 
