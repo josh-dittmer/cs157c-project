@@ -422,24 +422,20 @@ public class Main {
                 Result result = tx.run(
                         """
                         CALL () {
-                            CALL db.index.fulltext.queryNodes("name_index", $nameQuery)
-                            YIELD node, score
-                            RETURN node, score ORDER BY score DESC LIMIT 10
-                            UNION
-                            CALL db.index.fulltext.queryNodes("username_index", $usernameQuery)
+                            CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
                             YIELD node, score
                             RETURN node, score ORDER BY score DESC LIMIT 10
                         }
-                        RETURN node ORDER BY score DESC LIMIT 10;
+                        RETURN node, score ORDER BY score DESC LIMIT 10;
                         """,
                         parameters(
-                                "nameQuery", targetQuery + "~2",
-                                "usernameQuery", "*" + targetQuery + "*"
+                                "targetQuery", targetQuery + "~ OR *" + targetQuery + "*"
                         )
                 );
 
                 return result.list(record -> {
                     Node node = record.get("node").asNode();
+                    System.out.println(record.get("score").asDouble());
 
                     User user = new User();
                     user.setName(node.get("name").asString(""));
