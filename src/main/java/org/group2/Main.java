@@ -421,12 +421,20 @@ public class Main {
             List<User> users = session.executeRead(tx -> {
                 Result result = tx.run(
                         """
-                        CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
-                        YIELD node, score
-                        RETURN node, score ORDER BY score DESC LIMIT 5;
+                        CALL () {
+                            CALL db.index.fulltext.queryNodes("name_index", $nameQuery)
+                            YIELD node, score
+                            RETURN node, score ORDER BY score DESC LIMIT 10
+                            UNION
+                            CALL db.index.fulltext.queryNodes("username_index", $usernameQuery)
+                            YIELD node, score
+                            RETURN node, score ORDER BY score DESC LIMIT 10
+                        }
+                        RETURN node ORDER BY score DESC LIMIT 10;
                         """,
                         parameters(
-                                "targetQuery", "*" + targetQuery + "~*"
+                                "nameQuery", targetQuery + "~2",
+                                "usernameQuery", "*" + targetQuery + "*"
                         )
                 );
 
@@ -445,7 +453,7 @@ public class Main {
 
             System.out.println("Search results:");
             for (User user : users) {
-                System.out.println("\t" + user.getName() + " (@" + user.getUsername() + ")");
+                System.out.println("\t" + user.getName() + " (" + user.getUsername() + ")");
             }
         } catch (Exception e) {
             System.out.println("Search error: " + e.getMessage());

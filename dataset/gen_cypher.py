@@ -146,9 +146,18 @@ def generate_cypher_queries(
         f.write("""\n
             // 3. Create necessary indexes
 
-            CREATE FULLTEXT INDEX fulltext_index
+            CREATE FULLTEXT INDEX name_index
             FOR (u:User)
-            ON EACH [u.name, u.username];
+            ON EACH [u.name];
+
+            CREATE FULLTEXT INDEX username_index
+            FOR (u:User)
+            ON EACH [u.username]
+            OPTIONS {
+                indexConfig: {
+                    `fulltext.analyzer`: 'url'
+                }
+            };
         """)
 
 # first, load the dataset
