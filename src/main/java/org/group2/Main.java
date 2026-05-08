@@ -534,21 +534,18 @@ public class Main {
         System.out.println("\n--- UC-10: Search Users ---");
 
         System.out.print("Enter the user's name or username: ");
-        String targetQuery = scanner.nextLine().trim();
+        String query = scanner.nextLine().trim();
 
         try (Session session = driver.session()) {
             List<User> users = session.executeRead(tx -> {
                 Result result = tx.run(
                         """
-                        CALL () {
-                            CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
-                            YIELD node, score
-                            RETURN node, score ORDER BY score DESC LIMIT 10
-                        }
-                        RETURN node, score ORDER BY score DESC LIMIT 10;
+                        CALL db.index.fulltext.queryNodes("fulltext_index", $targetQuery)
+                        YIELD node, score
+                        RETURN node ORDER BY score DESC LIMIT 10
                         """,
                         parameters(
-                                "targetQuery", targetQuery + "~ OR *" + targetQuery + "*"
+                                "targetQuery", query + "~ OR *" + query + "*"
                         )
                 );
 
@@ -583,7 +580,7 @@ public class Main {
                 Result result = tx.run(
                         """
                                 MATCH (u:User)
-                                RETURN u, COUNT{(u)<-[:FOLLOWS]-()} AS numFollowers ORDER BY numFollowers DESC LIMIT 5
+                                RETURN u, COUNT{(u)<-[:FOLLOWS]-()} AS numFollowers ORDER BY numFollowers DESC LIMIT 10
                                 """);
 
                 System.out.println("Most popular users:");
